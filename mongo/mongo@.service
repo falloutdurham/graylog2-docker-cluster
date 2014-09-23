@@ -1,0 +1,25 @@
+[Unit]
+Description=MongoDB service
+After=docker.service
+Requires=docker.service
+
+[Service]
+EnvironmentFile=/etc/environment
+TimeoutStartSec=0
+
+ExecStartPre=-/usr/bin/docker rmi mongo
+ExecStartPre=-/usr/bin/docker pull mongo
+ExecStartPre=-/usr/bin/docker stop %p-%i
+ExecStartPre=-/usr/bin/docker rm %p-%i
+ExecStartPre=/usr/bin/mkdir -p /data/mongodb-%i
+
+ExecStart=/bin/bash -c '\
+  /usr/bin/docker run -p 27017:27017 -v /data/mongodb-%i:/data/db --name %p-%i mongo'
+
+ExecStartPost=/bin/bash -c '\
+    /usr/bin/sleep 5; \
+    /usr/bin/etcdctl set /services/graylog2/mongo/$COREOS_PUBLIC_IPV4 1'
+
+ExecStop=/usr/bin/docker stop %p-%i
+ExecStop=/usr/bin/docker rm %p-%i
+ExecStop=-/bin/bash -c '/usr/bin/etcdctl rm /services/graylog2/mongo/${COREOS_PUBLIC_IPV4}'

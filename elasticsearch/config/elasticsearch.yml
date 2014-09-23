@@ -1,0 +1,18 @@
+path:
+  data: /data/data
+  logs: /data/log
+  plugins: /data/plugins
+  work: /data/work
+
+# Set cluster name for Greylog2
+
+cluster:
+  name: graylog2
+
+# Turn off multicast and dynamic scripting
+
+discovery.zen.ping.multicast.enabled: false
+discovery.zen.ping.unicast.hosts: ELASTICSEARCH_HOSTS
+script.disable_dynamic: true
+network.publish_host: HOST_IP
+

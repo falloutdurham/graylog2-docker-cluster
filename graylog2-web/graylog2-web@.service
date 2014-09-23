@@ -1,0 +1,34 @@
+[Unit]
+Description=Graylog2-web service
+After=docker.service
+Requires=docker.service
+
+[Service]
+EnvironmentFile=/etc/environment
+TimeoutStartSec=0
+
+ExecStartPre=-/usr/bin/docker rmi carsondial/graylog2-web
+ExecStartPre=-/usr/bin/docker pull carsondial/graylog2-web
+ExecStartPre=-/usr/bin/docker stop %p-%i
+ExecStartPre=-/usr/bin/docker rm %p-%i
+
+ExecStart=/bin/bash -c '\
+  /usr/bin/etcdctl ls --recursive /services/graylog2/server; \
+  if [ "$?" = "0" ]; then \
+      GRAYLOG2_HOSTS=$(etcdctl ls --recursive /services/graylog2/server \
+                      | grep -Eo "([0-9]{1,3}\.){3}[0-9]{1,3}" \
+                      | sed "s/.*/http:\/\/&:12900/" \
+                      | paste -s -d","); \
+  else \
+      GRAYLOG2_HOSTS=""; \
+  fi; \
+  /usr/bin/docker run -p 9000:9000 \
+  -e "GRAYLOG2_HOSTS=$GRAYLOG2_HOSTS" \
+  --name %p-%i carsondial/graylog2-web'
+
+ExecStop=/usr/bin/docker stop %p-%i
+ExecStop=/usr/bin/docker rm %p-%i
+
+[X-Fleet]
+Conflicts=elasticsearch*.service
+Conflicts=graylog2-server*.service

@@ -1,0 +1,44 @@
+[Unit]
+Description=Graylog2-server service
+After=docker.service
+Requires=docker.service
+
+[Service]
+EnvironmentFile=/etc/environment
+TimeoutStartSec=0
+
+ExecStartPre=-/usr/bin/docker rmi carsondial/graylog2-server
+ExecStartPre=-/usr/bin/docker pull carsondial/graylog2-server
+ExecStartPre=-/usr/bin/docker stop %p-%i
+ExecStartPre=-/usr/bin/docker rm %p-%i
+
+ExecStart=/bin/bash -c '\
+  /usr/bin/etcdctl ls --recursive /services/graylog2/elasticsearch; \
+  if [ "$?" = "0" ]; then \
+      ELASTICSEARCH_HOSTS=$(etcdctl ls --recursive /services/graylog2/elasticsearch \
+                      | sed "s/\/services\/graylog2\/elasticsearch\///g" \
+                      | paste -s -d","); \
+  else \
+      ELASTICSEARCH_HOSTS=""; \
+  fi; \
+  /usr/bin/etcdctl ls --recursive /services/graylog2/mongo; \
+  if [ "$?" = "0" ]; then \
+      MONGO_HOSTS=$(etcdctl ls --recursive /services/graylog2/mongo \
+                      | sed "s/\/services\/graylog2\/mongo\///g" \
+                      | paste -s -d","); \
+  else \
+      MONGO_HOSTS=""; \
+  fi; \
+  /usr/bin/docker run -p 12900:12900 -p 12201:12201 -p 9300:9300 \
+  -e "ELASTICSEARCH_HOSTS=$ELASTICSEARCH_HOSTS" \
+  -e "MONGODB_HOST=$MONGO_HOSTS" \
+  -e "HOST_IP=$COREOS_PUBLIC_IPV4" \
+  --name %p-%i carsondial/graylog2-server'
+
+ExecStartPost=/bin/bash -c '\
+    /usr/bin/sleep 3; \
+    /usr/bin/etcdctl set /services/graylog2/server/$COREOS_PUBLIC_IPV4 1'
+
+ExecStop=/usr/bin/docker stop %p-%i
+ExecStop=/usr/bin/docker rm %p-%i
+ExecStop=-/bin/bash -c '/usr/bin/etcdctl rm /services/graylog2/server/${COREOS_PUBLIC_IPV4}'
