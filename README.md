@@ -54,8 +54,24 @@ Admin password is currently `yourpasswd`, but this can be changed if a `PASSWORD
 
 All registrations in `etcd` are carried out in the `/graylog2/` namespace.
 
+Currently, all service files point to containers located at DockerHub (carsondial/*). These need to be changed to point at an internal registry.
 
+### Docker Environment Variables
 
+* ElasticSearch
+  * `ELASTICSEARCH_HOSTS` - comma-separated list of existing ES hosts (pulled from `etcd` at service start
+  * `HOST_IP` - IP address for new node to announce for transport (ES containers are bound to the CoreOS machines' ports, so you can currently only run one per machine)
 
+* Mongo
+  * none (uses standard DockerHub image)   
+
+* Graylog2-Server
+  * `ELASTICSEARCH_HOSTS` - comma-separated list of ES hosts
+  * `MONGODB_HOST` - as above but for MongoDB
+  * `HOST_IP` - external IP for graylog2 to announce (binds to external ports, so again, one server per CoreOS host
+  * `PASSWORD` - to override default password, pass in a sha256 hash, e.g. `echo -n yourpassword | shasum -a 256`
+
+* Graylog2-Web
+  * `GRAYLOG2_HOSTS` - list of Graylog2-server hosts  
 
 
